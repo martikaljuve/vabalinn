@@ -148,8 +148,7 @@ void loop() {
     }
     buffer[bufferidx] = c;
 
-    Serial.write
-    (c);
+    Serial.write(c);
     if (c == '\n') {
       //putstring_nl("EOL");
       //Serial.print(buffer);
