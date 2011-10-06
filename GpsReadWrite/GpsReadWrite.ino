@@ -13,6 +13,7 @@ char* sats;
 #define CH_LF 0x0A
 const char CRLF[]={CH_CR, CH_LF, 0};
 
+
 void setup()  
 {
   Serial.begin(57600);
@@ -20,16 +21,16 @@ void setup()
   //In case the battery died and reset to factory settings change baud rate here
   mySerial.begin(57600);
   char s4[40];
-//  mySerial.print(NMEA_ConstructSentence(s4,"PMTK251,14400")); 
-//  mySerial.end();
-//  mySerial.begin(14400);
+  mySerial.print(NMEA_ConstructSentence(s4,"PMTK251,14400")); 
+  mySerial.end();
+  mySerial.begin(14400);
   
   char s1[40];
   mySerial.print(NMEA_ConstructSentence(s1,"PMTK220,200")); //200 for 5 HZ 1000 for 1 Hz
   char s2[40];
   mySerial.print(NMEA_ConstructSentence(s2,"PMTK314,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")); //For GGA messages once every 5 messages
   char s3[40];
-//  mySerial.print(NMEA_ConstructSentence(s3,"PMTK251,14400")); //Not sure why this has to be sent everytime but won't work without 
+  mySerial.print(NMEA_ConstructSentence(s3,"PMTK251,14400")); //Not sure why this has to be sent everytime but won't work without 
    
    
   newgps = false;
