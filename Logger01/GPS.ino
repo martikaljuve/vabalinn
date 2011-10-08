@@ -4,8 +4,8 @@
 SoftwareSerial gpsSerial(8, 9);
 TinyGPS gps;
 
-const char* gpsFilePattern = "gpslog-%06lu-%08lu.txt";
-char gpsFile[50];
+const char* gpsFilePattern = "g%02d%02d%02d.txt";
+char gpsFile[12];
 
 #define CH_CR 0x0D 
 #define CH_LF 0x0A
@@ -35,52 +35,58 @@ void gpsSetup()
 }
 
 bool hasInitialized = false;
-unsigned long fix_age, date, time;
 
 //
 // MAIN LOOP
 //
 void gpsLoop()
 {
-	if (hasInitialized) {
-		gpsGetData();
-	}
-	else {
-		gpsGetFirstData();
-	}
+  if (hasInitialized) {
+    gpsGetData();
+  }
+  else {
+    gpsGetFirstData();
+  }
 }
 
 void gpsGetFirstData() {
   while (gpsSerial.available()) {
-		char c = gpsSerial.read();
+    char c = gpsSerial.read();
 #ifdef SERIAL_ENABLED
     Serial.print(c);
 #endif
 
-		if (gps.encode(c)) {
-			gps.get_datetime(&date, &time, &fix_age);
-			
-			sprintf(gpsFile, gpsFilePattern, date, time);
-			
-			hasInitialized = true;
+    if (gps.encode(c)) {
+      int year;
+      byte month, day, hour, minute, second, hundredths;
+      unsigned long fix_age;
+      gps.crack_datetime(&year, &month, &day, &hour, &minute, &second, &hundredths, &fix_age);
+      
+      sprintf(gpsFile, gpsFilePattern, day, hour, minute);
+      
+      sdOpen("bbb.txt");
+      sdWrite('a');
+      sdClose();
+      
+      hasInitialized = true;
 #ifdef SERIAL_ENABLED
-			Serial.println("GPS first data received:");
-			Serial.print("Date: ");
-			Serial.print(date);
-			Serial.print(", time: ");
-			Serial.print(time);
-			Serial.print(", fix age: ");
-			Serial.println(fix_age);
-			
-			Serial.print("Using GPS file named: ");
-			Serial.println(gpsFile);
+      Serial.println("GPS first data received:");
+      Serial.print("Day: ");
+      Serial.print(day);
+      Serial.print(", minute: ");
+      Serial.print(minute);
+      Serial.print(", fix age: ");
+      Serial.println(fix_age);
+      
+      Serial.print("Using GPS file named: ");
+      Serial.println(gpsFile);
 #endif
-		}
+    }
   }
 }
 
 void gpsGetData() {
-	sdOpen(gpsFile);
+  sdOpen(gpsFile);
   
   while (gpsSerial.available()) {
     char c = gpsSerial.read();
