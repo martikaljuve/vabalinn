@@ -1,11 +1,11 @@
+#include <stdio.h>
 #include <SoftwareSerial.h>
 #include <TinyGPS.h>
 
 SoftwareSerial gpsSerial(8, 9);
 TinyGPS gps;
 
-const char* gpsFilePattern = "g%02d%02d%02d.txt";
-char gpsFile[12];
+char gpsFile[] = "00000000.log";
 
 #define CH_CR 0x0D 
 #define CH_LF 0x0A
@@ -18,13 +18,13 @@ void gpsSetup()
   char s4[40];
   gpsSerial.print(NMEA_ConstructSentence(s4,"PMTK251,14400")); 
   gpsSerial.end();
-
+  
   gpsSerial.begin(14400);
   
   char s1[40];
   gpsSerial.print(NMEA_ConstructSentence(s1,"PMTK220,200")); //200 for 5 HZ 1000 for 1 Hz
   char s2[40];
-  gpsSerial.print(NMEA_ConstructSentence(s2,"PMTK314,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")); //For GGA messages once every 5 messages
+  gpsSerial.print(NMEA_ConstructSentence(s2,"PMTK314,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")); //For RMC messages once every 5 messages
   char s3[40];
   gpsSerial.print(NMEA_ConstructSentence(s3,"PMTK251,14400")); //Not sure why this has to be sent everytime but won't work without 
 
@@ -57,43 +57,44 @@ void gpsGetFirstData() {
 #endif
 
     if (gps.encode(c)) {
-      int year;
-      byte month, day, hour, minute, second, hundredths;
-      unsigned long fix_age;
-      gps.crack_datetime(&year, &month, &day, &hour, &minute, &second, &hundredths, &fix_age);
-      
-      sprintf(gpsFile, gpsFilePattern, day, hour, minute);
-      
-      sdOpen("bbb.txt");
-      sdWrite('a');
-      sdClose();
-      
       hasInitialized = true;
 #ifdef SERIAL_ENABLED
-      Serial.println("GPS first data received:");
-      Serial.print("Day: ");
-      Serial.print(day);
-      Serial.print(", minute: ");
-      Serial.print(minute);
-      Serial.print(", fix age: ");
-      Serial.println(fix_age);
-      
-      Serial.print("Using GPS file named: ");
-      Serial.println(gpsFile);
+      Serial.println("Got a complete GPS message.");
 #endif
+
+      unsigned long fix_age, time, date;
+      gps.get_datetime(&date, &time, &fix_age);
+
+      if (fix_age == TinyGPS::GPS_INVALID_AGE) {
+#ifdef SERIAL_ENABLED
+        Serial.println("Invalid GPS fix!");
+#endif
+        return;
+      }
+      
+      sprintf(gpsFile, "%02lu.log", time);
     }
   }
 }
+
+bool gpsDataReceived = false;
 
 void gpsGetData() {
   sdOpen(gpsFile);
   
   while (gpsSerial.available()) {
+    gpsDataReceived = true;
     char c = gpsSerial.read();
     sdWrite(c);
 #ifdef SERIAL_ENABLED
     Serial.print(c);
 #endif
+  }
+  
+  if (gpsDataReceived) {
+    gpsDataReceived = false;
+    sdWrite('\r');
+    sdWrite('\n');
   }
   
   sdClose();

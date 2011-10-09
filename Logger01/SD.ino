@@ -33,3 +33,9 @@ void sdWrite(char data) {
     dataFile.print(data);
   }
 }
+
+void sdWrite(String data) {
+	if (dataFile) {
+		dataFile.print(data);
+	}
+}

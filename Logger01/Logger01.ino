@@ -5,6 +5,12 @@
 void setup() {
   initialize();
   
+  //pinMode(4, OUTPUT);
+  //digitalWrite(4, HIGH);
+	
+  //pinMode(5, OUTPUT);
+  //digitalWrite(5, HIGH);
+	
   gpsSetup();
   //imuSetup();
 }
@@ -19,7 +25,7 @@ void loop() {
 //
 void initialize() {
 #ifdef SERIAL_ENABLED
-  Serial.begin(115200);
+  Serial.begin(57600);
   Serial.println("Serial started.");
 #endif
 
