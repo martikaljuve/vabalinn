@@ -1,11 +1,15 @@
 #include <stdio.h>
 #include <SoftwareSerial.h>
 #include <TinyGPS.h>
+#include <SD.h>
 
 SoftwareSerial gpsSerial(8, 9);
 TinyGPS gps;
 
+long nextFlush = 5000;
+
 char gpsFile[] = "00000000.log";
+File logFile;
 
 #define CH_CR 0x0D 
 #define CH_LF 0x0A
@@ -15,23 +19,29 @@ void gpsSetup()
 {  
   //In case the battery died and reset to factory settings change baud rate here
   gpsSerial.begin(57600);
+/*
   char s4[40];
   gpsSerial.print(NMEA_ConstructSentence(s4,"PMTK251,14400")); 
   gpsSerial.end();
   
   gpsSerial.begin(14400);
-  
+ */ 
   char s1[40];
   gpsSerial.print(NMEA_ConstructSentence(s1,"PMTK220,200")); //200 for 5 HZ 1000 for 1 Hz
   char s2[40];
   gpsSerial.print(NMEA_ConstructSentence(s2,"PMTK314,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")); //For RMC messages once every 5 messages
   char s3[40];
   gpsSerial.print(NMEA_ConstructSentence(s3,"PMTK251,14400")); //Not sure why this has to be sent everytime but won't work without 
-
+  gpsSerial.begin(14400);
+	
   free(s1);
   free(s2);
   free(s3);
-  free(s4);
+ // free(s4);
+
+#ifdef SERIAL_ENABLED
+  Serial.println("GPS Initialized.");
+#endif
 }
 
 bool hasInitialized = false;
@@ -43,6 +53,13 @@ void gpsLoop()
 {
   if (hasInitialized) {
     gpsGetData();
+		if (millis() > nextFlush) {
+			nextFlush = millis() + 5000;
+			logFile.flush();
+#ifdef SERIAL_ENABLED
+			Serial.println("Flushed content to SD file.");
+#endif
+		}
   }
   else {
     gpsGetFirstData();
@@ -50,11 +67,9 @@ void gpsLoop()
 }
 
 void gpsGetFirstData() {
-  while (gpsSerial.available()) {
+  if (gpsSerial.available()) {
     char c = gpsSerial.read();
-#ifdef SERIAL_ENABLED
-    Serial.print(c);
-#endif
+    //Serial.print(c);
 
     if (gps.encode(c)) {
       hasInitialized = true;
@@ -72,32 +87,33 @@ void gpsGetFirstData() {
         return;
       }
       
-      sprintf(gpsFile, "%02lu.log", time);
+      sprintf(gpsFile, "%08lu.log", time);
+      logFile = SD.open(gpsFile, FILE_WRITE);         
+#ifdef SERIAL_ENABLED      
+      Serial.print("gpsFile = ");
+      Serial.println(gpsFile);
+#endif
     }
   }
 }
 
-bool gpsDataReceived = false;
-
 void gpsGetData() {
-  sdOpen(gpsFile);
+  if (!gpsSerial.available()) {
+    return;
+  }
   
   while (gpsSerial.available()) {
-    gpsDataReceived = true;
     char c = gpsSerial.read();
-    sdWrite(c);
+		if (logFile) {
+			logFile.print(c);
+		}
 #ifdef SERIAL_ENABLED
+		else {
+			Serial.println("logFile is not opened!");
+		}
     Serial.print(c);
 #endif
   }
-  
-  if (gpsDataReceived) {
-    gpsDataReceived = false;
-    sdWrite('\r');
-    sdWrite('\n');
-  }
-  
-  sdClose();
 }
 
 //

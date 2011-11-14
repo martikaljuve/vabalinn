@@ -17,25 +17,3 @@ void sdSetup() {
   Serial.println("Card initialized.");
 #endif
 }
-
-File dataFile;
-void sdOpen(char* file) {
-  dataFile = SD.open(file, FILE_WRITE);
-}
-
-void sdClose() {
-  dataFile.close();
-}
-
-void sdWrite(char data) {
-  // if the file is available, write to it:
-  if (dataFile) {
-    dataFile.print(data);
-  }
-}
-
-void sdWrite(String data) {
-	if (dataFile) {
-		dataFile.print(data);
-	}
-}
