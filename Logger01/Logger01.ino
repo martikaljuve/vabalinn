@@ -2,6 +2,10 @@
 
 #define SERIAL_ENABLED 1
 
+static unsigned long gpsTime = 0;
+static bool gpsHasInitialized = false;
+static bool accHasInitialized = false;
+
 void setup() {
   initialize();
   
@@ -12,12 +16,12 @@ void setup() {
   //digitalWrite(5, HIGH);
 	
   gpsSetup();
-  //imuSetup();
+	//accelSetup();
 }
 
 void loop() {
   gpsLoop();
-  //imuLoop();
+//	accelLoop();
 }
 
 //

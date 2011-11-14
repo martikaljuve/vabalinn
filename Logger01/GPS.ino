@@ -6,10 +6,11 @@
 SoftwareSerial gpsSerial(8, 9);
 TinyGPS gps;
 
-long nextFlush = 5000;
+const unsigned int gpsFlushInterval = 5000;
+unsigned long nextGpsFlush = gpsFlushInterval;
 
-char gpsFile[] = "00000000.log";
-File logFile;
+char gpsFilename[] = "00000000.log";
+static File gpsFile;
 
 #define CH_CR 0x0D 
 #define CH_LF 0x0A
@@ -44,20 +45,19 @@ void gpsSetup()
 #endif
 }
 
-bool hasInitialized = false;
-
 //
 // MAIN LOOP
 //
 void gpsLoop()
 {
-  if (hasInitialized) {
+  if (gpsHasInitialized) {
     gpsGetData();
-		if (millis() > nextFlush) {
-			nextFlush = millis() + 5000;
-			logFile.flush();
+
+		if (millis() > nextGpsFlush) {
+			nextGpsFlush = millis() + gpsFlushInterval;
+			gpsFile.flush();
 #ifdef SERIAL_ENABLED
-			Serial.println("Flushed content to SD file.");
+			Serial.println("Flushing GPS SD file.");
 #endif
 		}
   }
@@ -69,16 +69,21 @@ void gpsLoop()
 void gpsGetFirstData() {
   if (gpsSerial.available()) {
     char c = gpsSerial.read();
-    //Serial.print(c);
+		
+//#ifdef SERIAL_ENABLED
+//    Serial.print(c);
+//#endif
 
     if (gps.encode(c)) {
-      hasInitialized = true;
+      gpsHasInitialized = true;
+
 #ifdef SERIAL_ENABLED
-      Serial.println("Got a complete GPS message.");
+			Serial.println("Got a complete GPS message.");
 #endif
 
       unsigned long fix_age, time, date;
       gps.get_datetime(&date, &time, &fix_age);
+			//gpsTime = time;
 
       if (fix_age == TinyGPS::GPS_INVALID_AGE) {
 #ifdef SERIAL_ENABLED
@@ -87,11 +92,17 @@ void gpsGetFirstData() {
         return;
       }
       
-      sprintf(gpsFile, "%08lu.log", time);
-      logFile = SD.open(gpsFile, FILE_WRITE);         
+      sprintf(gpsFilename, "%08lu.gps", time);
+      gpsFile = SD.open(gpsFilename, FILE_WRITE);
+
 #ifdef SERIAL_ENABLED      
-      Serial.print("gpsFile = ");
-      Serial.println(gpsFile);
+      Serial.print("gpsFilename = ");
+      Serial.println(gpsFilename);
+			
+			if (gpsFile) {
+				Serial.print("GPS log file is ");
+				Serial.println(gpsFile ? "open." : "closed.");
+			}
 #endif
     }
   }
@@ -104,14 +115,26 @@ void gpsGetData() {
   
   while (gpsSerial.available()) {
     char c = gpsSerial.read();
-		if (logFile) {
-			logFile.print(c);
+		
+		/*if (gps.encode(c)) {
+			unsigned long fix_age, time, date;
+      gps.get_datetime(&date, &time, &fix_age);
+			
+			if (fix_age == TinyGPS::GPS_INVALID_AGE) {
+				return;
+      }
+			
+			gpsTime = time;
+		}*/
+		
+		if (gpsFile) {
+			gpsFile.print(c);
 		}
 #ifdef SERIAL_ENABLED
 		else {
-			Serial.println("logFile is not opened!");
+			Serial.println("gpsFile is not opened!");
 		}
-    Serial.print(c);
+    //Serial.print(c);
 #endif
   }
 }
